@@ -1,5 +1,5 @@
 # demultiplex
-Demultiplexes Illumina reads (Illumina 1.9)
+Demultiplexes Illumina reads (Illumina 1.9) with dual matched indexes. 
 
 Example usage:
 
@@ -11,3 +11,4 @@ This assumes that R1 and R4 are forward strand and reverse strand biological rea
 
 There is 1 optional argument: -q (--qual_thresh.) By default, when any of the biological reads or barcode sequences have an average quality score less than 30, those records are automatically put in an "undetermined" file. 
 
+Current speed is 1 million records (4 million lines)  in approximately 3.5 minutes. 

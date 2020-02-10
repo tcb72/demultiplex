@@ -1,6 +1,6 @@
 import gzip
 import argparse
-from barcode import BarcodeRecord
+from index import IndexRecord
 from sequence import SequenceRecord
 
 def write_file_dict(index_list):
@@ -24,7 +24,7 @@ def write_file_dict(index_list):
 
     return(output_file_dict)
 
-def process_files(filenames,threshold=30):
+def process_files(filenames,threshold, index_list_fn):
     '''
     This function will process the FASTQ files.
     It will check for correct indexes, index hopping, and bad indexes
@@ -36,13 +36,15 @@ def process_files(filenames,threshold=30):
     index_1 = filenames[1]
     index_2 = filenames[2]
 
+    # get valid indexes into set
+    f = open(index_list_fn)
+    index_list = f.readline().strip().split(',')
+    f.close()
+
     # set counters to count number of occurrences for each situation
     index_hop_counter = 0
     correct_read_counter = 0
     und_read_counter = 0
-
-    # get valid indexes into set
-    index_list = {'GTAGCGTA','CGATCGAT','GATCAAGG','AACAGCGA','TAGCCATG','CGGTAATC','CTCTGGAT','TACCGGAT','CTAGCTCA','CACTTCAC','GCTACTCT','ACGATCAG','TATGGCAC','TGTTCCGT','GTCCTAAG','TCGACAAG','TCTTCGAC','ATCATGCG','ATCGTGGT','TCGAGAGT','TCGGATTC','GATCTTGC','AGAGTCCA','AGGATAGC'}
 
     # get output file dictionary from function
     output_file_dict = write_file_dict(index_list)
@@ -69,8 +71,8 @@ def process_files(filenames,threshold=30):
 
             seq1 = SequenceRecord(seq1_list)
             seq2 = SequenceRecord(seq2_list)
-            index1 = BarcodeRecord(index1_list)
-            index2 = BarcodeRecord(index2_list)
+            index1 = IndexRecord(index1_list)
+            index2 = IndexRecord(index2_list)
 
             # if first line of seq1 is empty string, means at end of file
             # break out of loop
@@ -84,11 +86,11 @@ def process_files(filenames,threshold=30):
 
             # add that combined string to header of each sequence (1st line of seq1/seq2 += concatenated index string above)
 
-            seq1.update_header(index1.barcode, index2.barcode)
-            seq2.update_header(index1.barcode, index2.barcode)
+            seq1.update_header(index1.index_seq, index2.index_seq)
+            seq2.update_header(index1.index_seq, index2.index_seq)
 
             # if the indexes are not in the index list, or the quality score of any of the biological/index sequences are less than the threshold (default is 30), then store the record in an undetermined file.
-            if (index1.barcode not in index_list) or (index2.reverse_complement() not in index_list) or (seq1.average_quality() < threshold) or (seq2.average_quality() < threshold) or (index1.average_quality() < threshold) or (index2.average_quality() < threshold):
+            if (index1.index_seq not in index_list) or (index2.reverse_complement() not in index_list) or (seq1.average_quality() < threshold) or (seq2.average_quality() < threshold) or (index1.average_quality() < threshold) or (index2.average_quality() < threshold):
                 und_read_counter += 1
                 fw_und_output.write('\n'.join((seq1.header, seq1.sequence, seq1.optional_line, seq1.quality_line)) + '\n')
                 rv_und_output.write('\n'.join((seq2.header, seq2.sequence, seq2.optional_line, seq2.quality_line)) + '\n')
@@ -96,10 +98,10 @@ def process_files(filenames,threshold=30):
 
             # if index_1 same as reverse_complement(index_2), this means NO index hopping
             # write record to barcode-specific output file
-            if index1.barcode == index2.reverse_complement():
+            if index1.index_seq == index2.reverse_complement():
                 correct_read_counter += 1
 
-                fw_output_file = output_file_dict[index1.barcode][0]
+                fw_output_file = output_file_dict[index1.index_seq][0]
                 rv_output_file = output_file_dict[index2.reverse_complement()][1]
 
                 # write R1 list to file, where filename is based on output file dictionary (key is index_1)
@@ -150,14 +152,16 @@ def process_files(filenames,threshold=30):
 if __name__ == "__main__":
     # add arguments for argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument("-r1", "--r1", help="Enter R1 (read 1) filename.")
-    parser.add_argument("-r2", "--r2", help="Enter R2 (index 1) filename.")
-    parser.add_argument("-r3", "--r3", help="Enter R3 (index 2) filename.")
-    parser.add_argument("-r4", "--r4", help="Enter R4 (read 2) filename.")
+    parser.add_argument("-r1", "--r1", required=True, type = str, help="Enter R1 (read 1) filename.")
+    parser.add_argument("-r2", "--r2", required=True, type = str, help="Enter R2 (index 1) filename.    ")
+    parser.add_argument("-r3", "--r3", required=True, type = str, help="Enter R3 (index 2) filename.")
+    parser.add_argument("-r4", "--r4", required=True, type = str, help="Enter R4 (read 2) filename.")
+    parser.add_argument("-q", "--qual_thresh", type=int, default = 30, required=False, help="Enter average quality score threshold.")
+    parser.add_argument("-i", "--index_file", type=str, required=True, help="Comma separated list of valid indexes.")
     args = parser.parse_args()
 
     # place user's arguments into list
     file_list = [args.r1, args.r2, args.r3, args.r4]
 
     # threshold refers to phred score
-    process_files(file_list, threshold=30)
+    process_files(file_list, args.qual_thresh, args.index_file)

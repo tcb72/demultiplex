@@ -1,4 +1,4 @@
-class BarcodeRecord:
+class IndexRecord:
 
     def __init__(self, record):
         '''
@@ -6,7 +6,7 @@ class BarcodeRecord:
         '''
         self.record = record
         self.header = record[0]
-        self.barcode = record[1]
+        self.index_seq = record[1]
         self.optional_line = record[2]
         self.quality_line = record[3]
         self.complement = {'A':'T', 'T':'A', 'C':'G', 'G':'C', 'N':'N'}
@@ -18,7 +18,7 @@ class BarcodeRecord:
         """
 
         # [::-1] slice reverses a string
-        reverse_barcode = self.barcode[::-1]
+        reverse_barcode = self.index_seq[::-1]
 
         # convert string into list of chars
         reverse_barcode_list = list(reverse_barcode)
