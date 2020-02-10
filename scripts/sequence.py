@@ -19,13 +19,13 @@ class SequenceRecord:
         '''
         self.header = self.header +  ' ' + index1 + '-' + index2
 
-    def average_quality(self):
+    def average_quality(self, phred_offset):
         '''
         Takes in a sequence of nucleotides, and returns the average quality score
         '''
         # for each character, get phred score using ord(), and adds it to cumulative sum variable
 
-        sum_quality_score = sum(ord(char) - 33 for char in self.quality_line)
+        sum_quality_score = sum(ord(char) - phred_offset for char in self.quality_line)
         #for char in self.quality_line:
             #phred_score = ord(char)-33
             #sum_quality_score += phred_score

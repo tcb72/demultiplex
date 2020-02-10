@@ -24,7 +24,7 @@ def write_file_dict(index_list):
 
     return(output_file_dict)
 
-def process_files(filenames,threshold, index_list_fn):
+def process_files(filenames,threshold, index_list_fn, phred_offset):
     '''
     This function will process the FASTQ files.
     It will check for correct indexes, index hopping, and bad indexes
@@ -90,7 +90,7 @@ def process_files(filenames,threshold, index_list_fn):
             seq2.update_header(index1.index_seq, index2.index_seq)
 
             # if the indexes are not in the index list, or the quality score of any of the biological/index sequences are less than the threshold (default is 30), then store the record in an undetermined file.
-            if (index1.index_seq not in index_list) or (index2.reverse_complement() not in index_list) or (seq1.average_quality() < threshold) or (seq2.average_quality() < threshold) or (index1.average_quality() < threshold) or (index2.average_quality() < threshold):
+            if (index1.index_seq not in index_list) or (index2.reverse_complement() not in index_list) or (seq1.average_quality(phred_offset) < threshold) or (seq2.average_quality(phred_offset) < threshold) or (index1.average_quality(phred_offset) < threshold) or (index2.average_quality(phred_offset) < threshold):
                 und_read_counter += 1
                 fw_und_output.write('\n'.join((seq1.header, seq1.sequence, seq1.optional_line, seq1.quality_line)) + '\n')
                 rv_und_output.write('\n'.join((seq2.header, seq2.sequence, seq2.optional_line, seq2.quality_line)) + '\n')
@@ -152,16 +152,22 @@ def process_files(filenames,threshold, index_list_fn):
 if __name__ == "__main__":
     # add arguments for argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument("-r1", "--r1", required=True, type = str, help="Enter R1 (read 1) filename.")
-    parser.add_argument("-r2", "--r2", required=True, type = str, help="Enter R2 (index 1) filename.    ")
-    parser.add_argument("-r3", "--r3", required=True, type = str, help="Enter R3 (index 2) filename.")
-    parser.add_argument("-r4", "--r4", required=True, type = str, help="Enter R4 (read 2) filename.")
-    parser.add_argument("-q", "--qual_thresh", type=int, default = 30, required=False, help="Enter average quality score threshold.")
+    parser.add_argument("-r1", "--r1", required=True, type = str, help="R1 (read 1) filename.")
+    parser.add_argument("-r2", "--r2", required=True, type = str, help="R2 (index 1) filename.")
+    parser.add_argument("-r3", "--r3", required=True, type = str, help="R3 (index 2) filename.")
+    parser.add_argument("-r4", "--r4", required=True, type = str, help="R4 (read 2) filename.")
+    parser.add_argument("-q", "--qual_thresh", type=int, default = 30, required=False, help="Average quality score threshold.")
     parser.add_argument("-i", "--index_file", type=str, required=True, help="Comma separated list of valid indexes.")
+    parser.add_argument("-f", "--format", required=True, default = 1.9, help="Illumina RTA version (ex: 1.8).")
     args = parser.parse_args()
 
     # place user's arguments into list
     file_list = [args.r1, args.r2, args.r3, args.r4]
 
+    if float(args.format) >= 1.8:
+        phred_offset = 33
+    else:
+        phred_offset = 64
+
     # threshold refers to phred score
-    process_files(file_list, args.qual_thresh, args.index_file)
+    process_files(file_list, args.qual_thresh, args.index_file, phred_offset)
